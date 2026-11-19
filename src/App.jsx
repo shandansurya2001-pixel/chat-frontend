@@ -2,8 +2,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 
-const API = "http://127.0.0.1:8000";
-const WS = "ws://127.0.0.1:8000/ws";
+// Live Render backend
+const API = "https://chat-backend-6h73.onrender.com";
+const WS = "wss://chat-backend-6h73.onrender.com/ws";
 
 function formatLastSeen(lastSeen) {
   if (!lastSeen) return "Last seen: Unknown";
@@ -73,53 +74,91 @@ function App() {
   useEffect(() => {
     if (!registered) return;
 
-    const socket = new WebSocket(WS);
-    socketRef.current = socket;
+    let reconnectTimer;
+    let reconnectAttempts = 0;
+    let cancelled = false;
 
-    socket.onopen = () => {
-      socket.send(
-        JSON.stringify({
-          type: "register",
-          username,
-        })
-      );
+    const connectSocket = () => {
+      if (cancelled) return;
 
-      loadUsers();
-    };
+      const socket = new WebSocket(WS);
+      socketRef.current = socket;
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      socket.onopen = () => {
+        reconnectAttempts = 0;
 
-      if (data.type === "user_list") {
+        socket.send(
+          JSON.stringify({
+            type: "register",
+            username,
+          })
+        );
+
         loadUsers();
-      }
+      };
 
-      if (data.type === "private_message") {
-        loadUsers();
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
 
-        if (data.sender === selectedUserRef.current) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              text: data.text,
-              type: "received",
-            },
-          ]);
+          if (data.type === "user_list") {
+            loadUsers();
+          }
+
+          if (data.type === "private_message") {
+            loadUsers();
+
+            if (data.sender === selectedUserRef.current) {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  text: data.text,
+                  type: "received",
+                },
+              ]);
+            }
+          }
+
+          if (data.type === "error") {
+            alert(data.message);
+          }
+        } catch (error) {
+          console.error("Could not process server message:", error);
         }
-      }
+      };
 
-      if (data.type === "error") {
-        alert(data.message);
-      }
+      socket.onclose = () => {
+        if (socketRef.current === socket) {
+          socketRef.current = null;
+        }
+
+        if (!cancelled) {
+          const delay = Math.min(
+            1000 * 2 ** reconnectAttempts,
+            10000
+          );
+
+          reconnectAttempts += 1;
+          reconnectTimer = setTimeout(connectSocket, delay);
+        }
+      };
+
+      socket.onerror = (error) => {
+        console.error("WebSocket connection error:", error);
+        socket.close();
+      };
     };
 
-    socket.onclose = () => {
-      socketRef.current = null;
-    };
+    connectSocket();
 
     return () => {
-      socket.close();
-      socketRef.current = null;
+      cancelled = true;
+      clearTimeout(reconnectTimer);
+
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
     };
   }, [registered, username, loadUsers]);
 
@@ -186,6 +225,14 @@ function App() {
     }
   };
 
+  // Return to chat list on mobile
+  const backToChats = () => {
+    setSelectedUser(null);
+    setMessage("");
+    setNewChatOpen(false);
+    setSearchQuery("");
+  };
+
   // Send message
   const sendMessage = () => {
     const text = message.trim();
@@ -196,7 +243,7 @@ function App() {
       !socketRef.current ||
       socketRef.current.readyState !== WebSocket.OPEN
     ) {
-      alert("Connection not ready. Please wait.");
+      alert("Connection not ready. Please wait a moment and try again.");
       return;
     }
 
@@ -234,7 +281,6 @@ function App() {
 
     setMessage("");
 
-    // Refresh recent chats after sending
     setTimeout(() => {
       loadUsers();
     }, 500);
@@ -250,12 +296,9 @@ function App() {
   // User status display
   const UserStatus = ({ user }) => (
     <small
+      className="user-status"
       style={{
-        display: "block",
-        marginLeft: "26px",
-        marginTop: "4px",
-        color: user.online ? "#16a34a" : "#888",
-        fontSize: "12px",
+        color: user.online ? "#16a34a" : "#aaa",
       }}
     >
       {user.online ? "Online" : formatLastSeen(user.last_seen)}
@@ -276,6 +319,12 @@ function App() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Your name"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && username.trim()) {
+                setUsername(username.trim());
+                setRegistered(true);
+              }
+            }}
           />
 
           <button
@@ -298,8 +347,9 @@ function App() {
     <div className="chat-container">
 
       {/* Sidebar */}
-      <div className="sidebar">
-
+      <div
+        className={`sidebar ${selectedUser ? "mobile-hidden" : ""}`}
+      >
         <div className="sidebar-header">
           <h3>Chats</h3>
 
@@ -315,7 +365,6 @@ function App() {
 
         {newChatOpen ? (
           <div className="search-section">
-
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -349,13 +398,13 @@ function App() {
                 <UserStatus user={user} />
               </div>
             ))}
-
           </div>
         ) : (
           <>
-
             {users.length === 0 && (
-              <p>No chats yet. Click + New Chat to find someone.</p>
+              <p className="empty-chats">
+                No chats yet. Click + New Chat to find someone.
+              </p>
             )}
 
             {users.map((user) => (
@@ -380,24 +429,29 @@ function App() {
                 <UserStatus user={user} />
               </div>
             ))}
-
           </>
         )}
-
       </div>
 
       {/* Chat window */}
-      <div className="chat-window">
-
+      <div
+        className={`chat-window ${!selectedUser ? "mobile-hidden" : ""}`}
+      >
         {selectedUser ? (
           <>
-
             <div className="chat-header">
+              <button
+                className="back-button"
+                onClick={backToChats}
+                aria-label="Back to chats"
+              >
+                ←
+              </button>
+
               <h3>{selectedUser}</h3>
             </div>
 
             <div className="messages">
-
               {messages.map((msg, index) => (
                 <div
                   key={index}
@@ -408,11 +462,9 @@ function App() {
               ))}
 
               <div ref={messagesEndRef} />
-
             </div>
 
             <div className="input-area">
-
               <input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -427,19 +479,15 @@ function App() {
               <button onClick={sendMessage}>
                 Send
               </button>
-
             </div>
-
           </>
         ) : (
-          <div style={{ padding: 20 }}>
+          <div className="welcome-screen">
             <h3>Welcome, {username}!</h3>
             <p>Select a chat or start a new conversation.</p>
           </div>
         )}
-
       </div>
-
     </div>
   );
 }

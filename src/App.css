@@ -1,78 +1,304 @@
-body {
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
   margin: 0;
+  width: 100%;
+  min-height: 100%;
   font-family: Arial, sans-serif;
+}
+
+body {
+  overflow: hidden;
+}
+
+button,
+input {
+  font: inherit;
 }
 
 .chat-container {
   display: flex;
+  width: 100%;
   height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .sidebar {
   width: 25%;
+  min-width: 260px;
   background-color: #111b21;
   color: white;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.sidebar-header h3 {
+  margin: 0;
 }
 
 .user {
   background-color: #202c33;
-  padding: 10px;
+  padding: 12px;
   margin-top: 10px;
   border-radius: 8px;
   cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.user:hover,
+.user.selected {
+  background-color: #2a3942;
+}
+
+.user-status {
+  display: block;
+  margin-left: 26px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.empty-chats {
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.search-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.search-section h4 {
+  margin-bottom: 5px;
 }
 
 .chat-window {
   width: 75%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background-color: #0b141a;
+  color: white;
+  overflow: hidden;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 20px;
+  background-color: #202c33;
+  min-height: 65px;
+}
+
+.chat-header h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.back-button {
+  display: none;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 22px;
 }
 
 .messages {
   flex: 1;
+  min-height: 0;
   padding: 20px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .message {
   max-width: 60%;
-  padding: 10px;
+  width: fit-content;
+  padding: 10px 13px;
   margin-bottom: 10px;
   border-radius: 8px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .received {
   background-color: #202c33;
   color: white;
+  align-self: flex-start;
 }
 
 .sent {
   background-color: #005c4b;
   color: white;
   margin-left: auto;
+  align-self: flex-end;
 }
 
 .input-area {
   display: flex;
+  gap: 10px;
   padding: 15px;
   background-color: #202c33;
 }
 
+.input-area input {
+  min-width: 0;
+}
+
 input {
   flex: 1;
-  padding: 10px;
+  width: 100%;
+  padding: 12px;
   border-radius: 8px;
   border: none;
+  outline: none;
 }
 
 button {
-  margin-left: 10px;
+  margin-left: 0;
   padding: 10px 15px;
   border-radius: 8px;
   border: none;
   background-color: #00a884;
   color: white;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+button:hover {
+  background-color: #008f70;
+}
+
+.welcome-screen {
+  padding: 20px;
+}
+
+/* Login screen */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 20px;
+  background-color: #0b141a;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  padding: 30px;
+  border-radius: 12px;
+  background-color: #202c33;
+  color: white;
+  text-align: center;
+}
+
+.login-card input {
+  display: block;
+  width: 100%;
+  margin: 15px 0;
+}
+
+.login-card button {
+  width: 100%;
+  margin-top: 5px;
+  padding: 12px;
+}
+
+/* Mobile layout */
+@media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .chat-container {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    padding: 15px;
+  }
+
+  .chat-window {
+    width: 100%;
+    height: 100%;
+  }
+
+  .mobile-hidden {
+    display: none !important;
+  }
+
+  .back-button {
+    display: inline-block;
+  }
+
+  .chat-header {
+    padding: 10px 12px;
+    min-height: 58px;
+  }
+
+  .messages {
+    padding: 12px;
+  }
+
+  .message {
+    max-width: 85%;
+  }
+
+  .input-area {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .input-area input {
+    font-size: 16px;
+    padding: 12px;
+  }
+
+  .input-area button {
+    padding: 12px 16px;
+  }
+
+  .sidebar-header button {
+    padding: 10px 12px;
+  }
+
+  .user {
+    padding: 14px;
+    margin-top: 10px;
+  }
+
+  .login-card {
+    padding: 24px;
+  }
+
+  input,
+  button {
+    font-size: 16px;
+  }
 }
